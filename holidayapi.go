@@ -1,36 +1,62 @@
-//package holidayapi
-package main
+package holidayapi
 
-import "fmt"
-
-// TODO: import ( encoding/json net/http net/url )
+import (
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+)
 
 type V1 struct {
+	Url string
 	Key string
 }
 
 func NewV1(key string) *V1 {
 	v1 := &V1{
 		Key: key,
+		Url: "https://holidayapi.com/v1/holidays?",
 	}
 
 	return v1
 }
 
-func (v1 *V1) Holidays(parameters map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{
-		"test": "ing",
+func (v1 *V1) Holidays(args map[string]interface{}) (map[string]interface{}, error) {
+	var data map[string]interface{}
+
+	if _, ok := args["key"]; !ok {
+		args["key"] = v1.Key
 	}
-}
 
-func main() {
-	hapi := NewV1("_MY_API_KEY_")
+	params := url.Values{}
 
-	fmt.Println(hapi.Key)
+	for k, v := range args {
+		params.Add(k, v.(string))
+	}
 
-	holidays := hapi.Holidays(map[string]interface{}{
-		"country": "US",
-	})
+	resp, err := http.Get(v1.Url + params.Encode())
 
-	fmt.Println("%#v\n", holidays)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	json.Unmarshal([]byte(string(body)), &data)
+
+	if resp.StatusCode != 200 {
+		_, ok := data["error"]
+
+		if !ok {
+			data["error"] = "Unknown error."
+		}
+	}
+
+	return data, nil
 }
