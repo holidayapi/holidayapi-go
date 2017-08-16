@@ -21,8 +21,8 @@ func NewV1(key string) *V1 {
 	return v1
 }
 
-func (v1 *V1) Holidays(args map[string]interface{}) (map[string]interface{}, error) {
-	var data map[string]interface{}
+func (v1 *V1) Holidays(args map[string]interface{}) (ResponseHoliday, error) {
+	var data ResponseHoliday
 
 	if _, ok := args["key"]; !ok {
 		args["key"] = v1.Key
@@ -37,7 +37,7 @@ func (v1 *V1) Holidays(args map[string]interface{}) (map[string]interface{}, err
 	resp, err := http.Get(v1.Url + params.Encode())
 
 	if err != nil {
-		return nil, err
+		return data, err
 	}
 
 	defer resp.Body.Close()
@@ -45,16 +45,14 @@ func (v1 *V1) Holidays(args map[string]interface{}) (map[string]interface{}, err
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		return nil, err
+		return data, err
 	}
 
 	json.Unmarshal([]byte(string(body)), &data)
 
 	if resp.StatusCode != 200 {
-		_, ok := data["error"]
-
-		if !ok {
-			data["error"] = "Unknown error."
+		if data.Error == "" {
+			data.Error = "Unknown error."
 		}
 	}
 
